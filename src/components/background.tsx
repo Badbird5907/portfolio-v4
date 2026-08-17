@@ -7,18 +7,103 @@ import { useTheme } from "@/lib/theme";
 const LOADIN_STEPS = [18, 12, 8, 5, 3];
 
 // The shaders default to 2x antialiased rendering with a 4K pixel budget —
-// brutal on weak GPUs. These sit behind a dark scrim, so cap the per-frame
-// fill cost proportionally to the CSS viewport instead: the soft mesh renders
-// at ~1.2x CSS resolution and the dither field at ~1.5x (it needs more to
-// keep its pixel grid defined), up to the old desktop ceilings. On a DPR-3
-// phone this is a 4-6x cut vs native; on desktop it matches the previous
-// budgets. Phones also get a single canvas (no chroma overlay), and devices
-// reporting very little memory get a static frame (speed 0 stops the render
-// loop entirely).
+// brutal on weak GPUs. These sit behind a dark scrim, so start from a
+// viewport-proportional budget (mesh ~1.2x CSS resolution, dither ~1.5x —
+// it needs more to keep its pixel grid defined) and then let a frame-rate
+// probe find the device's real ceiling. Phones also get a single canvas (no
+// chroma overlay), and devices reporting very little memory get a static
+// frame (speed 0 stops the render loop entirely).
 const MESH_MAX = 1920 * 1080;
 const DITHER_MAX = 2560 * 1440;
 
-const useShaderPerf = () => {
+// Frame-rate probe: after the load noise settles, sample fps in 1s windows
+// and walk the render scale down on weak devices — or up toward native
+// resolution on strong ones — until ~60fps sticks. The settled scale is
+// cached per screen configuration so the probe runs once per device.
+const SCALE_KEY = () =>
+	`shader-scale:v1:${window.screen.width}x${window.screen.height}@${window.devicePixelRatio}`;
+const SETTLE_MS = 2500;
+const WINDOW_MS = 1000;
+const MAX_WINDOWS = 6;
+
+const useAdaptiveScale = (enabled: boolean) => {
+	const [scale, setScale] = useState(1);
+
+	useEffect(() => {
+		const cached = Number(localStorage.getItem(SCALE_KEY()));
+		if (cached > 0) {
+			setScale(cached);
+			return;
+		}
+		if (!enabled) return;
+
+		let raf = 0;
+		let scaleNow = 1;
+		// Highest scale a good window has actually confirmed — an up-step is
+		// speculative until the next window measures it
+		let lastValidated = 1;
+		let steppedDown = false;
+		let windows = 0;
+		// >1 renders beyond the viewport-based guess, up to native resolution
+		const maxScale = Math.max(1, window.devicePixelRatio ** 2);
+		const finish = () => {
+			const settled = steppedDown ? scaleNow : lastValidated;
+			setScale(settled);
+			localStorage.setItem(SCALE_KEY(), String(settled));
+		};
+
+		const settle = setTimeout(() => {
+			let frames = 0;
+			let windowStart = performance.now();
+			let last = windowStart;
+			const loop = (now: number) => {
+				if (now - last > 1000) {
+					// Tab was hidden or the thread stalled — restart the window
+					frames = 0;
+					windowStart = now;
+				}
+				last = now;
+				frames += 1;
+				const elapsed = now - windowStart;
+				if (elapsed >= WINDOW_MS) {
+					const fps = (frames * 1000) / elapsed;
+					frames = 0;
+					windowStart = now;
+					windows += 1;
+					if (fps < 45) {
+						steppedDown = true;
+						scaleNow = Math.max(0.25, scaleNow * 0.65);
+						setScale(scaleNow);
+					} else if (fps > 55 && !steppedDown && scaleNow < maxScale) {
+						lastValidated = scaleNow;
+						scaleNow = Math.min(maxScale, scaleNow * 1.3);
+						setScale(scaleNow);
+					} else {
+						// Stable window — lock in what this window just measured
+						lastValidated = scaleNow;
+						finish();
+						return;
+					}
+					if (windows >= MAX_WINDOWS) {
+						finish();
+						return;
+					}
+				}
+				raf = requestAnimationFrame(loop);
+			};
+			raf = requestAnimationFrame(loop);
+		}, SETTLE_MS);
+
+		return () => {
+			clearTimeout(settle);
+			cancelAnimationFrame(raf);
+		};
+	}, [enabled]);
+
+	return scale;
+};
+
+const useShaderPerf = (paused: boolean) => {
 	const [env, setEnv] = useState<{
 		cssPixels: number;
 		// null until measured so the chroma overlay never mounts on phones
@@ -41,15 +126,16 @@ const useShaderPerf = () => {
 		return () => window.removeEventListener("resize", update);
 	}, []);
 
+	// No point probing while the shaders are static; wait until env is measured
+	const scale = useAdaptiveScale(
+		!paused && !env.frozen && env.coarsePointer !== null,
+	);
+	const budget = (factor: number, ceiling: number) =>
+		Math.min(ceiling, Math.round(env.cssPixels * factor * scale));
+
 	return {
-		mesh: {
-			minPixelRatio: 1,
-			maxPixelCount: Math.min(MESH_MAX, Math.round(env.cssPixels * 1.5)),
-		},
-		dither: {
-			minPixelRatio: 1,
-			maxPixelCount: Math.min(DITHER_MAX, Math.round(env.cssPixels * 2.2)),
-		},
+		mesh: { minPixelRatio: 1, maxPixelCount: budget(1.5, MESH_MAX) },
+		dither: { minPixelRatio: 1, maxPixelCount: budget(2.2, DITHER_MAX) },
 		coarsePointer: env.coarsePointer,
 		frozen: env.frozen,
 	};
@@ -129,7 +215,7 @@ const useDitherLoadIn = () => {
 };
 
 const SpreadBackground = ({ paused }: { paused: boolean }) => {
-	const { mesh, frozen } = useShaderPerf();
+	const { mesh, frozen } = useShaderPerf(paused);
 	return (
 		<>
 			<MeshGradient
@@ -148,7 +234,7 @@ const SpreadBackground = ({ paused }: { paused: boolean }) => {
 
 const DitherBackground = ({ paused }: { paused: boolean }) => {
 	const size = useDitherLoadIn();
-	const { dither, frozen } = useShaderPerf();
+	const { dither, frozen } = useShaderPerf(paused);
 	return (
 		<>
 			<Dithering
@@ -168,7 +254,7 @@ const DitherBackground = ({ paused }: { paused: boolean }) => {
 
 const ChromaBackground = ({ paused }: { paused: boolean }) => {
 	const size = useDitherLoadIn();
-	const { mesh, dither, coarsePointer, frozen } = useShaderPerf();
+	const { mesh, dither, coarsePointer, frozen } = useShaderPerf(paused);
 	const spotRef = useRef<HTMLDivElement>(null);
 	// The dither overlay only exists on fine-pointer devices: phones pay for a
 	// single canvas and skip the cursor spotlight (touch has no hover anyway)
