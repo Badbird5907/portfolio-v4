@@ -7,11 +7,53 @@ import { useTheme } from "@/lib/theme";
 const LOADIN_STEPS = [18, 12, 8, 5, 3];
 
 // The shaders default to 2x antialiased rendering with a 4K pixel budget —
-// brutal on weak GPUs. These sit behind a dark scrim, so render at native
-// resolution and cap the per-frame fill cost. The dither field gets a larger
-// budget than the mesh so its pixel grid stays reasonably crisp on retina.
-const MESH_PERF = { minPixelRatio: 1, maxPixelCount: 1920 * 1080 };
-const DITHER_PERF = { minPixelRatio: 1, maxPixelCount: 2560 * 1440 };
+// brutal on weak GPUs. These sit behind a dark scrim, so cap the per-frame
+// fill cost proportionally to the CSS viewport instead: the soft mesh renders
+// at ~1.2x CSS resolution and the dither field at ~1.5x (it needs more to
+// keep its pixel grid defined), up to the old desktop ceilings. On a DPR-3
+// phone this is a 4-6x cut vs native; on desktop it matches the previous
+// budgets. Phones also get a single canvas (no chroma overlay), and devices
+// reporting very little memory get a static frame (speed 0 stops the render
+// loop entirely).
+const MESH_MAX = 1920 * 1080;
+const DITHER_MAX = 2560 * 1440;
+
+const useShaderPerf = () => {
+	const [env, setEnv] = useState<{
+		cssPixels: number;
+		// null until measured so the chroma overlay never mounts on phones
+		coarsePointer: boolean | null;
+		frozen: boolean;
+	}>({ cssPixels: MESH_MAX, coarsePointer: null, frozen: false });
+
+	useEffect(() => {
+		const update = () => {
+			const memory = (navigator as Navigator & { deviceMemory?: number })
+				.deviceMemory;
+			setEnv({
+				cssPixels: window.innerWidth * window.innerHeight,
+				coarsePointer: window.matchMedia("(pointer: coarse)").matches,
+				frozen: memory !== undefined && memory <= 2,
+			});
+		};
+		update();
+		window.addEventListener("resize", update);
+		return () => window.removeEventListener("resize", update);
+	}, []);
+
+	return {
+		mesh: {
+			minPixelRatio: 1,
+			maxPixelCount: Math.min(MESH_MAX, Math.round(env.cssPixels * 1.5)),
+		},
+		dither: {
+			minPixelRatio: 1,
+			maxPixelCount: Math.min(DITHER_MAX, Math.round(env.cssPixels * 2.2)),
+		},
+		coarsePointer: env.coarsePointer,
+		frozen: env.frozen,
+	};
+};
 
 // Chroma's cursor interaction: one dither layer whose mask is mostly
 // semi-transparent (0.6 x 0.42 = the ambient 25%) but fully opaque in a soft
@@ -20,10 +62,13 @@ const DITHER_PERF = { minPixelRatio: 1, maxPixelCount: 2560 * 1440 };
 const SPOT_MASK =
 	"radial-gradient(320px circle at var(--spot-x, -999px) var(--spot-y, -999px), black 0%, rgba(0,0,0,0.42) 70%)";
 
-const useCursorSpot = (ref: React.RefObject<HTMLDivElement | null>) => {
+const useCursorSpot = (
+	ref: React.RefObject<HTMLDivElement | null>,
+	enabled: boolean,
+) => {
 	useEffect(() => {
 		const el = ref.current;
-		if (!el) return;
+		if (!enabled || !el) return;
 		let raf = 0;
 		let seen = false;
 		const target = { x: -999, y: -999 };
@@ -63,7 +108,7 @@ const useCursorSpot = (ref: React.RefObject<HTMLDivElement | null>) => {
 			document.documentElement.removeEventListener("pointerleave", onLeave);
 			if (raf) cancelAnimationFrame(raf);
 		};
-	}, [ref]);
+	}, [ref, enabled]);
 };
 
 const useDitherLoadIn = () => {
@@ -83,33 +128,37 @@ const useDitherLoadIn = () => {
 	return size;
 };
 
-const SpreadBackground = ({ paused }: { paused: boolean }) => (
-	<>
-		<MeshGradient
-			{...MESH_PERF}
-			colors={["#050507", "#0c1b3a", "#123c33", "#241a45", "#050507"]}
-			distortion={0.8}
-			swirl={0.5}
-			grainOverlay={0.35}
-			speed={paused ? 0 : 0.15}
-			style={{ width: "100%", height: "100%" }}
-		/>
-		<div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/35 to-black/70" />
-	</>
-);
+const SpreadBackground = ({ paused }: { paused: boolean }) => {
+	const { mesh, frozen } = useShaderPerf();
+	return (
+		<>
+			<MeshGradient
+				{...mesh}
+				colors={["#050507", "#0c1b3a", "#123c33", "#241a45", "#050507"]}
+				distortion={0.8}
+				swirl={0.5}
+				grainOverlay={0.35}
+				speed={paused || frozen ? 0 : 0.15}
+				style={{ width: "100%", height: "100%" }}
+			/>
+			<div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/35 to-black/70" />
+		</>
+	);
+};
 
 const DitherBackground = ({ paused }: { paused: boolean }) => {
 	const size = useDitherLoadIn();
+	const { dither, frozen } = useShaderPerf();
 	return (
 		<>
 			<Dithering
-				{...DITHER_PERF}
+				{...dither}
 				colorBack="#050507"
 				colorFront="#22304f"
 				shape="warp"
 				type="4x4"
 				size={size}
-				speed={paused ? 0 : 0.25}
+				speed={paused || frozen ? 0 : 0.25}
 				style={{ width: "100%", height: "100%" }}
 			/>
 			<div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-black/60" />
@@ -119,12 +168,16 @@ const DitherBackground = ({ paused }: { paused: boolean }) => {
 
 const ChromaBackground = ({ paused }: { paused: boolean }) => {
 	const size = useDitherLoadIn();
+	const { mesh, dither, coarsePointer, frozen } = useShaderPerf();
 	const spotRef = useRef<HTMLDivElement>(null);
-	useCursorSpot(spotRef);
+	// The dither overlay only exists on fine-pointer devices: phones pay for a
+	// single canvas and skip the cursor spotlight (touch has no hover anyway)
+	const withOverlay = coarsePointer === false;
+	useCursorSpot(spotRef, withOverlay);
 	return (
 		<>
 			<MeshGradient
-				{...MESH_PERF}
+				{...mesh}
 				colors={[
 					"#050509",
 					"#0e1e40",
@@ -135,25 +188,27 @@ const ChromaBackground = ({ paused }: { paused: boolean }) => {
 				]}
 				distortion={0.8}
 				swirl={0.5}
-				speed={paused ? 0 : 0.18}
+				speed={paused || frozen ? 0 : 0.18}
 				style={{ width: "100%", height: "100%" }}
 			/>
-			<div
-				ref={spotRef}
-				className="absolute inset-0 opacity-60 mix-blend-overlay"
-				style={{ maskImage: SPOT_MASK, WebkitMaskImage: SPOT_MASK }}
-			>
-				<Dithering
-					{...DITHER_PERF}
-					colorBack="#00000000"
-					colorFront="#ffffff"
-					shape="warp"
-					type="4x4"
-					size={size}
-					speed={paused ? 0 : 0.25}
-					style={{ width: "100%", height: "100%" }}
-				/>
-			</div>
+			{withOverlay && (
+				<div
+					ref={spotRef}
+					className="absolute inset-0 opacity-60 mix-blend-overlay"
+					style={{ maskImage: SPOT_MASK, WebkitMaskImage: SPOT_MASK }}
+				>
+					<Dithering
+						{...dither}
+						colorBack="#00000000"
+						colorFront="#ffffff"
+						shape="warp"
+						type="4x4"
+						size={size}
+						speed={paused || frozen ? 0 : 0.25}
+						style={{ width: "100%", height: "100%" }}
+					/>
+				</div>
+			)}
 			<div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/25 to-black/65" />
 		</>
 	);
@@ -161,8 +216,9 @@ const ChromaBackground = ({ paused }: { paused: boolean }) => {
 
 const Background = () => {
 	const { theme } = useTheme();
-	// speed=0 stops the shader's rAF loop entirely — a static frame for
-	// reduced-motion users and zero recurring GPU cost
+	// speed=0 stops the shader's rAF loop entirely — a static frame with zero
+	// recurring GPU cost (reduced-motion users, and low-memory devices via
+	// the frozen flag in useShaderPerf)
 	const paused = useReducedMotion() ?? false;
 	return (
 		<div className="fixed inset-0">
