@@ -1,13 +1,39 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: grid padding/skeleton cells have no identity
 import { useEffect, useMemo, useState } from "react";
+import {
+	CONTRIBUTIONS_URL,
+	type Day,
+	GITHUB_USER,
+} from "@/lib/contributions-server";
 
-type Day = {
-	date: string;
-	count: number;
-	level: 0 | 1 | 2 | 3 | 4;
+const CACHE_KEY = "gh-contributions-v1";
+const CACHE_TTL = 60 * 60 * 1000; // revalidate in the background after 1h
+
+type CacheEntry = { fetchedAt: number; days: Day[] };
+
+const readCache = (): CacheEntry | null => {
+	try {
+		const raw = localStorage.getItem(CACHE_KEY);
+		if (!raw) return null;
+		const parsed: CacheEntry = JSON.parse(raw);
+		if (typeof parsed.fetchedAt !== "number" || !Array.isArray(parsed.days))
+			return null;
+		return parsed;
+	} catch {
+		return null;
+	}
 };
 
-const GITHUB_USER = "Badbird5907";
+const writeCache = (days: Day[]) => {
+	try {
+		localStorage.setItem(
+			CACHE_KEY,
+			JSON.stringify({ fetchedAt: Date.now(), days } satisfies CacheEntry),
+		);
+	} catch {
+		// storage full or unavailable — cache is best-effort
+	}
+};
 
 // Opaque equivalents of white at 10/30/50/70/95% over the page background
 // (#050507) — solid so the dithered backdrop doesn't show through the cells.
@@ -19,24 +45,49 @@ const LEVELS = [
 	"bg-[#f3f3f3]",
 ];
 
-const ContributionGraph = () => {
-	const [allDays, setAllDays] = useState<Day[] | null>(null);
+// Deterministic pseudo-random shades (SSR-safe) so the skeleton reads as a
+// graph being loaded rather than a graph with no contributions.
+const SKELETON_LEVELS = Array.from({ length: 53 }, (_, week) =>
+	Array.from({ length: 7 }, (_, day) => {
+		const noise = Math.sin((week * 7 + day + 1) * 12.9898) * 43758.5453;
+		const r = noise - Math.floor(noise);
+		return r < 0.55 ? 0 : r < 0.8 ? 1 : r < 0.95 ? 2 : 3;
+	}),
+);
+
+const ContributionGraph = ({
+	initialDays = null,
+}: {
+	initialDays?: Day[] | null;
+}) => {
+	const [allDays, setAllDays] = useState<Day[] | null>(initialDays);
 	const [failed, setFailed] = useState(false);
 	const [view, setView] = useState<"last" | string>("last");
 
 	useEffect(() => {
-		fetch(
-			`https://github-contributions-api.jogruber.de/v4/${GITHUB_USER}?y=all`,
-		)
+		// Server-cached data arrived with the page — nothing to fetch.
+		if (initialDays) return;
+
+		// Fallback path (server fetch failed): stale-while-revalidate against
+		// localStorage, refetching only when the cache is older than the TTL.
+		const cached = readCache();
+		if (cached) setAllDays(cached.days);
+		if (cached && Date.now() - cached.fetchedAt < CACHE_TTL) return;
+
+		fetch(CONTRIBUTIONS_URL)
 			.then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
-			.then((data: { contributions: Day[] }) =>
+			.then((data: { contributions: Day[] }) => {
 				// The API returns newest-year-first; sort chronologically
-				setAllDays(
-					[...data.contributions].sort((a, b) => a.date.localeCompare(b.date)),
-				),
-			)
-			.catch(() => setFailed(true));
-	}, []);
+				const days = [...data.contributions].sort((a, b) =>
+					a.date.localeCompare(b.date),
+				);
+				setAllDays(days);
+				writeCache(days);
+			})
+			.catch(() => {
+				if (!cached) setFailed(true);
+			});
+	}, [initialDays]);
 
 	const years = useMemo(() => {
 		if (!allDays) return [];
@@ -106,15 +157,15 @@ const ContributionGraph = () => {
 								)}
 							</div>
 						))
-					: Array.from({ length: 53 }, (_, weekIndex) => (
+					: SKELETON_LEVELS.map((week, weekIndex) => (
 							<div
 								key={`skeleton-${weekIndex}`}
-								className="flex min-w-0 flex-1 animate-pulse flex-col gap-[3px]"
+								className="flex min-w-0 flex-1 animate-pulse flex-col gap-[3px] opacity-60"
 							>
-								{Array.from({ length: 7 }, (_, dayIndex) => (
+								{week.map((level, dayIndex) => (
 									<div
 										key={`skeleton-${weekIndex}-${dayIndex}`}
-										className="aspect-square w-full rounded-[2px] bg-[#1e1e20]"
+										className={`aspect-square w-full rounded-[2px] ${LEVELS[level]}`}
 									/>
 								))}
 							</div>

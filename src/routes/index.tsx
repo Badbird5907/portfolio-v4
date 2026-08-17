@@ -10,11 +10,16 @@ import PageShell, {
 import Polaroid from "@/components/polaroid";
 import Reveal, { revealProps } from "@/components/reveal";
 import WritingList from "@/components/writing-list";
+import { getContributionsServerFn } from "@/lib/contributions-server";
 import { allPosts } from "@/lib/posts";
 import { useTheme } from "@/lib/theme";
 
 export const Route = createFileRoute("/")({
 	component: HomePage,
+	loader: () => getContributionsServerFn(),
+	// The server fn caches for an hour; don't re-RPC on every client navigation
+	staleTime: 60 * 60 * 1000,
+	preloadStaleTime: 60 * 60 * 1000,
 });
 
 const workRows = [
@@ -39,6 +44,7 @@ const workRows = [
 
 function HomePage() {
 	const { theme } = useTheme();
+	const contributions = Route.useLoaderData();
 	const posts = allPosts.slice(0, 2);
 
 	return (
@@ -101,7 +107,7 @@ function HomePage() {
 
 					<Reveal delay={0.3}>
 						<MiniLabel>GitHub</MiniLabel>
-						<ContributionGraph />
+						<ContributionGraph initialDays={contributions} />
 					</Reveal>
 				</div>
 
