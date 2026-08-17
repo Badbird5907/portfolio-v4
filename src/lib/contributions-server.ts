@@ -12,13 +12,17 @@ export const CONTRIBUTIONS_URL = `https://github-contributions-api.jogruber.de/v
 
 const TTL = 60 * 60 * 1000;
 
+// Per-instance memory cache. On Cloudflare Workers each isolate has its own
+// copy, so the cf options below also cache the response at the PoP — a cold
+// isolate pays a local cache hit instead of an origin round trip.
 let cache: { fetchedAt: number; days: Day[] } | null = null;
-let refreshing: Promise<void> | null = null;
 
 const fetchDays = async (): Promise<Day[]> => {
 	const res = await fetch(CONTRIBUTIONS_URL, {
 		signal: AbortSignal.timeout(4000),
-	});
+		// Workers-only edge cache hint; unknown properties are ignored on Node
+		cf: { cacheTtl: TTL / 1000, cacheEverything: true },
+	} as RequestInit);
 	if (!res.ok) throw new Error(`contributions API ${res.status}`);
 	const data: { contributions: Day[] } = await res.json();
 	// The API returns newest-year-first; sort chronologically
@@ -27,28 +31,17 @@ const fetchDays = async (): Promise<Day[]> => {
 
 export const getContributionsServerFn = createServerFn().handler(
 	async (): Promise<Day[] | null> => {
+		// No fire-and-forget refresh here: Workers cancels pending I/O once the
+		// response returns, so the refetch must be awaited.
 		if (cache && Date.now() - cache.fetchedAt < TTL) return cache.days;
-		if (cache) {
-			// Stale: serve it now, refresh in the background so SSR never blocks
-			if (!refreshing) {
-				refreshing = fetchDays()
-					.then((days) => {
-						cache = { fetchedAt: Date.now(), days };
-					})
-					.catch(() => {})
-					.finally(() => {
-						refreshing = null;
-					});
-			}
-			return cache.days;
-		}
 		try {
 			const days = await fetchDays();
 			cache = { fetchedAt: Date.now(), days };
 			return days;
 		} catch {
-			// Cold cache and API down — client falls back to its own fetch
-			return null;
+			// Serve stale on failure; null only when cold and the API is down
+			// (the client then falls back to fetching directly)
+			return cache?.days ?? null;
 		}
 	},
 );
