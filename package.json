@@ -1,0 +1,51 @@
+{
+  "name": "portfolio-v4",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#/*": "./src/*"
+  },
+  "scripts": {
+    "sync:blog-assets": "node scripts/sync-blog-assets.mjs",
+    "predev": "pnpm sync:blog-assets",
+    "prebuild": "pnpm sync:blog-assets",
+    "dev": "vite dev",
+    "generate-routes": "tsr generate",
+    "build": "vite build",
+    "preview": "vite preview",
+    "format": "biome format",
+    "lint": "biome lint",
+    "check": "biome check"
+  },
+  "dependencies": {
+    "@giscus/react": "^3.1.0",
+    "@mdx-js/rollup": "^3.1.1",
+    "@paper-design/shaders-react": "^0.0.80",
+    "@tailwindcss/typography": "^0.5.20",
+    "@tailwindcss/vite": "^4.1.18",
+    "@tanstack/react-router": "latest",
+    "@tanstack/react-start": "latest",
+    "lucide-react": "^1.31.0",
+    "motion": "^13.1.0",
+    "nitro": "3.0.260610-beta",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-twitter-embed": "^4.0.4",
+    "rehype-pretty-code": "^0.14.5",
+    "remark-frontmatter": "^5.0.0",
+    "remark-mdx-frontmatter": "^5.2.0",
+    "shiki": "^4.4.3",
+    "tailwindcss": "^4.1.18"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.5",
+    "@tanstack/router-cli": "^1.132.0",
+    "@types/mdx": "^2.0.14",
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^6.0.1",
+    "typescript": "^6.0.2",
+    "vite": "^8.0.0"
+  }
+}

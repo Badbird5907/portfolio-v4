@@ -1,0 +1,23 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Newsreader", Georgia, serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", monospace;
+}
+
+html {
+  background-color: #050507;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: rgba(241, 238, 231, 0.78);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(241, 238, 231, 0.9);
+  color: #050507;
+}
