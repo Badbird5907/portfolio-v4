@@ -25,6 +25,8 @@ export type Post = {
 	date: Date;
 	author: string;
 	banner?: string;
+	bannerCenter?: boolean;
+	featured?: boolean;
 	readingTime: string;
 	Content: ComponentType<{ components?: MDXComponents }>;
 };
@@ -45,6 +47,8 @@ export const allPosts: Post[] = Object.entries(modules)
 			date: new Date(fm.date),
 			author: fm.author,
 			banner: fm.banner,
+			bannerCenter: fm.bannerCenter,
+			featured: fm.featured,
 			readingTime: fm.readingTime,
 			Content: mod.default,
 		};
