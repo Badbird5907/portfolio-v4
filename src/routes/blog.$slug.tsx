@@ -48,7 +48,10 @@ function BlogPostPage() {
 				<Reveal delay={0.1}>
 					<h2
 						className="mt-6 font-serif text-3xl leading-tight md:text-4xl"
-						style={{ color: IVORY }}
+						style={{
+							color: IVORY,
+							viewTransitionName: `post-${post.slug}`,
+						}}
 					>
 						{post.title}
 					</h2>

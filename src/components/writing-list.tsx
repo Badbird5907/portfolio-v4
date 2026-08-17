@@ -11,7 +11,10 @@ const WritingList = ({ posts }: { posts: Post[] }) => (
 						params={{ slug: post.slug }}
 						className="group block"
 					>
-						<p className="text-[14px] text-[#f1eee7] transition-colors group-hover:underline underline-offset-[3px] decoration-white/40">
+						<p
+							className="text-[14px] text-[#f1eee7] transition-colors group-hover:underline underline-offset-[3px] decoration-white/40"
+							style={{ viewTransitionName: `post-${post.slug}` }}
+						>
 							{post.title}
 						</p>
 						<p className="text-[12px] text-white/50">

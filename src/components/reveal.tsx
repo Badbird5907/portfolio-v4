@@ -1,10 +1,14 @@
 import { motion } from "motion/react";
+import { hasNavigated } from "@/lib/entrance";
 import { type Theme, useTheme } from "@/lib/theme";
 
 // Entrance animation per theme: Spread fades up, Dither/Chroma flicker in
 // like a CRT. Spread motion props onto any motion.* element via revealProps.
-export const revealProps = (theme: Theme, delay = 0) =>
-	theme === "spread"
+// After a client-side navigation this returns nothing — content renders
+// immediately and the view transition animates the page change instead.
+export const revealProps = (theme: Theme, delay = 0) => {
+	if (hasNavigated()) return {};
+	return theme === "spread"
 		? {
 				initial: { opacity: 0, y: 14 },
 				animate: { opacity: 1, y: 0 },
@@ -20,6 +24,7 @@ export const revealProps = (theme: Theme, delay = 0) =>
 					ease: "linear" as const,
 				},
 			};
+};
 
 const Reveal = ({
 	delay = 0,

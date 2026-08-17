@@ -1,4 +1,5 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import { resetEntrance } from "@/lib/entrance";
 
 export const THEMES = [
 	{ value: "spread", label: "Spread" },
@@ -18,14 +19,23 @@ const ThemeContext = createContext<{
 
 export const ThemeProvider = ({
 	initial,
+	override,
 	children,
 }: {
 	initial: Theme;
+	/** A ?theme= URL param — wins over the saved cookie, without touching it */
+	override?: Theme;
 	children: React.ReactNode;
 }) => {
-	const [theme, setThemeState] = useState<Theme>(initial);
+	const [theme, setThemeState] = useState<Theme>(override ?? initial);
+	// Apply the override if the search param changes after mount
+	useEffect(() => {
+		if (override) setThemeState(override);
+	}, [override]);
 	const setTheme = (next: Theme) => {
 		setThemeState(next);
+		// Theme switches remount the page — let the entrance animations replay
+		resetEntrance();
 		// biome-ignore lint/suspicious/noDocumentCookie: Cookie Store API isn't supported everywhere
 		document.cookie = `theme=${next};path=/;max-age=31536000;samesite=lax`;
 	};

@@ -42,7 +42,7 @@ const PageShell = ({
 			<div>
 				<h1
 					className="mb-1 font-serif text-3xl md:text-4xl"
-					style={{ color: IVORY }}
+					style={{ color: IVORY, viewTransitionName: "site-title" }}
 				>
 					<Link to="/">Evan Yu</Link>
 				</h1>

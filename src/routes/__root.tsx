@@ -3,16 +3,26 @@ import {
 	HeadContent,
 	Link,
 	Outlet,
+	retainSearchParams,
 	Scripts,
+	useRouter,
 } from "@tanstack/react-router";
+import { useEffect } from "react";
 import Background from "@/components/background";
 import PageShell from "@/components/page-shell";
 import ThemeSwitcher from "@/components/theme-switcher";
-import { ThemeProvider, useTheme } from "@/lib/theme";
+import { markNavigated } from "@/lib/entrance";
+import { isTheme, type Theme, ThemeProvider, useTheme } from "@/lib/theme";
 import { getThemeServerFn } from "@/lib/theme-server";
 import appCss from "../styles.css?url";
 
 export const Route = createRootRoute({
+	// ?theme=spread|dither|chroma overrides the saved theme; retained across
+	// client-side navigations so the override follows you around the site
+	validateSearch: (search: Record<string, unknown>): { theme?: Theme } => ({
+		theme: isTheme(search.theme) ? search.theme : undefined,
+	}),
+	search: { middlewares: [retainSearchParams(["theme"])] },
 	head: () => ({
 		meta: [
 			{ charSet: "utf-8" },
@@ -56,9 +66,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 }
 
 function RootLayout() {
-	const theme = Route.useLoaderData();
+	const cookieTheme = Route.useLoaderData();
+	const { theme: override } = Route.useSearch();
 	return (
-		<ThemeProvider initial={theme}>
+		<ThemeProvider initial={cookieTheme} override={override}>
 			<AppFrame />
 		</ThemeProvider>
 	);
@@ -66,6 +77,13 @@ function RootLayout() {
 
 function AppFrame() {
 	const { theme } = useTheme();
+	const router = useRouter();
+	// After the first client-side navigation, entrance animations step aside
+	// and view transitions take over (see lib/entrance.ts)
+	useEffect(
+		() => router.subscribe("onBeforeNavigate", markNavigated),
+		[router],
+	);
 	return (
 		// Keyed by theme so switching replays the load-in animations
 		<div

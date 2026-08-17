@@ -45,7 +45,10 @@ function BlogIndexPage() {
 									<div className="flex flex-wrap items-baseline justify-between gap-x-4">
 										<h3
 											className="font-serif text-xl underline-offset-[3px] decoration-white/40 group-hover:underline md:text-2xl"
-											style={{ color: IVORY }}
+											style={{
+												color: IVORY,
+												viewTransitionName: `post-${post.slug}`,
+											}}
 										>
 											{post.title}
 										</h3>
