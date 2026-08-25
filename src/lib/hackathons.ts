@@ -174,7 +174,7 @@ export const hackathons: Hackathon[] = [
 		date: "Feb 2026",
 		fullDate: new Date("2026-02-14"),
 		award:
-			"🏆 1st Place - Education Track (Zoom) | Best Creation with HeyGen Avatar API",
+			"🏆 1st Place - Education Track | Best Creation with HeyGen Avatar API",
 		location: "Stanford University",
 		links: [
 			{ label: "Devpost", url: "https://devpost.com/software/minerva-3sj6z0" },
