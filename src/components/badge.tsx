@@ -20,7 +20,7 @@ const Badge = () => (
 					textLength={237}
 					lengthAdjust="spacingAndGlyphs"
 				>
-					Evan Yu · Toronto · Software Engineer ·
+					Evan Yu · Software Engineer · Math @ UofT ·
 				</textPath>
 			</text>
 		</svg>

@@ -85,7 +85,6 @@ const CornerMeta = () => {
 
 	return (
 		<div className="hidden text-right font-mono text-[10px] uppercase leading-relaxed tracking-[0.18em] text-white/45 md:block">
-			<p className="whitespace-nowrap">43.6532° N — 79.3832° W</p>
 			<p className="flex items-center justify-end gap-[0.5em] whitespace-nowrap">
 				{/* "Toronto" and the weather trade places; fixed width so the clock never shifts */}
 				<span className="relative inline-flex h-[15px] w-[58px] items-center">

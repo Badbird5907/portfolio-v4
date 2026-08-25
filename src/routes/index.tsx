@@ -99,9 +99,16 @@ function HomePage() {
 							.
 						</p>
 						<p className="pt-1 font-mono text-[11px] leading-relaxed tracking-wide text-white/45">
-							* most recently TreeHacks 2026 @ Stanford, where I built Minerva,
-							an AI video tutor that won both 1st in the Education track and
-							Best Creation with HeyGen API.
+							* most recently{" "}
+							<Link
+								to="/blog/$slug"
+								params={{ slug: "treehacks-2026" }}
+								className={underline}
+							>
+								TreeHacks 2026
+							</Link>{" "}
+							@ Stanford, where I built Minerva, an AI video tutor that won both
+							1st in the Education track and Best Creation with HeyGen API.
 						</p>
 					</Reveal>
 

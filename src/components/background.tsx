@@ -3,8 +3,8 @@ import { useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { useTheme } from "@/lib/theme";
 
-// Background dither resolves from coarse to fine on load
-const LOADIN_STEPS = [18, 12, 8, 5, 3];
+// Dither cell size, fixed — the shader renders at its final grain immediately
+const DITHER_SIZE = 3;
 
 // The shaders default to 2x antialiased rendering with a 4K pixel budget —
 // brutal on weak GPUs. These sit behind a dark scrim, so start from a
@@ -197,23 +197,6 @@ const useCursorSpot = (
 	}, [ref, enabled]);
 };
 
-const useDitherLoadIn = () => {
-	const [size, setSize] = useState(LOADIN_STEPS[0]);
-	useEffect(() => {
-		let step = 0;
-		const id = setInterval(() => {
-			step += 1;
-			if (step >= LOADIN_STEPS.length) {
-				clearInterval(id);
-				return;
-			}
-			setSize(LOADIN_STEPS[step]);
-		}, 200);
-		return () => clearInterval(id);
-	}, []);
-	return size;
-};
-
 const SpreadBackground = ({ paused }: { paused: boolean }) => {
 	const { mesh, frozen } = useShaderPerf(paused);
 	return (
@@ -233,7 +216,6 @@ const SpreadBackground = ({ paused }: { paused: boolean }) => {
 };
 
 const DitherBackground = ({ paused }: { paused: boolean }) => {
-	const size = useDitherLoadIn();
 	const { dither, frozen } = useShaderPerf(paused);
 	return (
 		<>
@@ -243,7 +225,7 @@ const DitherBackground = ({ paused }: { paused: boolean }) => {
 				colorFront="#22304f"
 				shape="warp"
 				type="4x4"
-				size={size}
+				size={DITHER_SIZE}
 				speed={paused || frozen ? 0 : 0.25}
 				style={{ width: "100%", height: "100%" }}
 			/>
@@ -253,7 +235,6 @@ const DitherBackground = ({ paused }: { paused: boolean }) => {
 };
 
 const ChromaBackground = ({ paused }: { paused: boolean }) => {
-	const size = useDitherLoadIn();
 	const { mesh, dither, coarsePointer, frozen } = useShaderPerf(paused);
 	const spotRef = useRef<HTMLDivElement>(null);
 	// The dither overlay only exists on fine-pointer devices: phones pay for a
@@ -289,7 +270,7 @@ const ChromaBackground = ({ paused }: { paused: boolean }) => {
 						colorFront="#ffffff"
 						shape="warp"
 						type="4x4"
-						size={size}
+						size={DITHER_SIZE}
 						speed={paused || frozen ? 0 : 0.25}
 						style={{ width: "100%", height: "100%" }}
 					/>

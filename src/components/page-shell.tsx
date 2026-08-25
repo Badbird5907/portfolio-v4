@@ -47,7 +47,7 @@ const PageShell = ({
 					<Link to="/">Evan Yu</Link>
 				</h1>
 				<p className="text-[15px] text-white/50">
-					Software engineer in Toronto
+					Full-stack software engineer
 				</p>
 			</div>
 			<CornerMeta />
@@ -78,7 +78,6 @@ const PageShell = ({
 					),
 				)}
 			</div>
-			<span className="font-serif italic">Toronto</span>
 		</Reveal>
 	</div>
 );
