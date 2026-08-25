@@ -68,8 +68,9 @@ function HomePage() {
 							>
 								The Relationship Company
 							</a>
-							, working on a consumer mobile app and an AI messaging agent.
-							Before that I was the founding engineer at{" "}
+							, working on product across mobile and web, plus a bit of the
+							infrastructure underneath. Before that I was the founding engineer
+							at{" "}
 							<a
 								href="https://connectalum.com/"
 								target="_blank"
