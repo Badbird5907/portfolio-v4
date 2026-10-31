@@ -186,4 +186,21 @@ export const hackathons: Hackathon[] = [
 		description:
 			"Built an accessible AI tutor platform that teaches any topic over video calls in a non-judgmental environment. Generates MANIM animations for math concepts and integrates with Desmos for interactive teaching.",
 	},
+	{
+		name: "CalHacks 13.0",
+		slug: "calhacks-13",
+		url: "https://calhacks.io/",
+		date: "Oct 2026",
+		fullDate: new Date("2026-10-23"),
+		award: "🏆 4th Place - Hyphenate Track",
+		location: "Palace of Fine Arts, San Francisco, CA (UC Berkeley)",
+		links: [
+			{
+				label: "Devpost",
+				url: "https://devpost.com/software/eve-event-finances-handled",
+			},
+		],
+		description:
+			"Built Eve, an AI agent for event finances that prepares travel reimbursements, prize payouts, and tax paperwork for human approval.",
+	},
 ];

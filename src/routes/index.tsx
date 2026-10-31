@@ -92,8 +92,8 @@ function HomePage() {
 							>
 								hackathons
 							</Link>
-							<sup>*</sup> — I've won six of the ten I've entered. I also write
-							the occasional{" "}
+							<sup>*</sup> — I've won prizes at seven of the eleven I've
+							entered. I also write the occasional{" "}
 							<Link to="/blog" className={underline} style={{ color: IVORY }}>
 								blog post
 							</Link>
@@ -102,14 +102,14 @@ function HomePage() {
 						<p className="pt-1 font-mono text-[11px] leading-relaxed tracking-wide text-white/45">
 							* most recently{" "}
 							<Link
-								to="/blog/$slug"
-								params={{ slug: "treehacks-2026" }}
+								to="/hackathons/$slug"
+								params={{ slug: "calhacks-13" }}
 								className={underline}
 							>
-								TreeHacks 2026
+								CalHacks 13.0
 							</Link>{" "}
-							@ Stanford, where I built Minerva, an AI video tutor that won both
-							1st in the Education track and Best Creation with HeyGen API.
+							in San Francisco, where I built Eve, an AI agent for event
+							finances that won 4th place in the Hyphenate track.
 						</p>
 					</Reveal>
 

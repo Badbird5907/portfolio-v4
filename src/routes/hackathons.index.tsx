@@ -52,7 +52,9 @@ const stats = [
 	{ value: hackathons.length, label: "Attended" },
 	{ value: hackathons.filter((h) => h.award).length, label: "Awards" },
 	{
-		value: hackathons.filter((h) => h.award?.includes("Place")).length,
+		value: hackathons.filter((h) =>
+			/\b(1st|2nd|3rd) Place\b/.test(h.award ?? ""),
+		).length,
 		label: "Top 3 finishes",
 	},
 	{ value: new Date().getFullYear() - 2024 + 1, label: "Years active" },
