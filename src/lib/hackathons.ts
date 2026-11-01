@@ -98,7 +98,7 @@ export const hackathons: Hackathon[] = [
 		url: "https://calhacks.io/",
 		date: "Oct 2025",
 		fullDate: new Date("2025-10-24"),
-		location: "Palace of Fine Arts, San Francisco, CA (UC Berkeley)",
+		location: "UC Berkeley",
 		links: [
 			{
 				label: "Devpost",
@@ -193,7 +193,7 @@ export const hackathons: Hackathon[] = [
 		date: "Oct 2026",
 		fullDate: new Date("2026-10-23"),
 		award: "🏆 4th Place - Hyphenate Track",
-		location: "Palace of Fine Arts, San Francisco, CA (UC Berkeley)",
+		location: "UC Berkeley",
 		links: [
 			{
 				label: "Devpost",
