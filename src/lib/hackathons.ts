@@ -5,6 +5,7 @@ export interface Hackathon {
 	date: string;
 	fullDate: Date;
 	award?: string;
+	placement?: string;
 	location?: string;
 	links?: { label: string; url: string }[];
 	description: string;
@@ -185,6 +186,23 @@ export const hackathons: Hackathon[] = [
 		],
 		description:
 			"Built an accessible AI tutor platform that teaches any topic over video calls in a non-judgmental environment. Generates MANIM animations for math concepts and integrates with Desmos for interactive teaching.",
+	},
+	{
+		name: "HackMIT 2026",
+		slug: "hackmit-2026",
+		url: "https://hackmit.org/",
+		date: "Sep 2026",
+		fullDate: new Date("2026-09-19"),
+		placement: "Top 15 overall",
+		location: "MIT",
+		links: [
+			{
+				label: "Project",
+				url: "https://plume.hackmit.org/project/ehefw-hurza-nwwzv-xkjuv",
+			},
+		],
+		description:
+			"Built Cognito, an AI tutor that checks handwritten work as you write, offers hints without giving away answers, and builds personalized study plans around existing lessons.",
 	},
 	{
 		name: "CalHacks 13.0",

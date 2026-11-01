@@ -92,7 +92,7 @@ function HomePage() {
 							>
 								hackathons
 							</Link>
-							<sup>*</sup> — I've won prizes at seven of the eleven I've
+							<sup>*</sup> — I've won prizes at seven of the twelve I've
 							entered. I also write the occasional{" "}
 							<Link to="/blog" className={underline} style={{ color: IVORY }}>
 								blog post
@@ -100,16 +100,27 @@ function HomePage() {
 							.
 						</p>
 						<p className="pt-1 font-mono text-[11px] leading-relaxed tracking-wide text-white/45">
-							* most recently{" "}
+							* highlights include{" "}
+							<Link
+								to="/blog/$slug"
+								params={{ slug: "treehacks-2026" }}
+								className={underline}
+								style={{ color: IVORY }}
+							>
+								TreeHacks 2026
+							</Link>{" "}
+							at <span style={{ color: IVORY }}>Stanford</span>, where Minerva
+							won 1st in Education and Best Creation with HeyGen API, and{" "}
 							<Link
 								to="/hackathons/$slug"
 								params={{ slug: "calhacks-13" }}
 								className={underline}
+								style={{ color: IVORY }}
 							>
 								CalHacks 13.0
 							</Link>{" "}
-							in San Francisco, where I built Eve, an AI agent for event
-							finances that won 4th place in the Hyphenate track.
+							at <span style={{ color: IVORY }}>UC Berkeley</span>, where Eve
+							placed 4th in the Hyphenate track.
 						</p>
 					</Reveal>
 

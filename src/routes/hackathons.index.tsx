@@ -127,13 +127,20 @@ function HackathonsPage() {
 										{hackathon.date}
 									</span>
 								</div>
-								{(hackathon.award || hackathon.location) && (
+								{(hackathon.award ||
+									hackathon.placement ||
+									hackathon.location) && (
 									<p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[11px] tracking-wide">
 										{hackathon.award && (
 											<span style={{ color: IVORY }}>
 												{hackathon.award.includes("🏆")
 													? hackathon.award
 													: `🎖 ${hackathon.award}`}
+											</span>
+										)}
+										{hackathon.placement && (
+											<span style={{ color: IVORY }}>
+												{hackathon.placement}
 											</span>
 										)}
 										{hackathon.location && (
